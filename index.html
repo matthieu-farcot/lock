@@ -2,14 +2,12 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Simulateur de crochetage - A-Frame</title>
+  <title>Simulateur de crochetage - A-Frame (Version améliorée)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <style>
     body { margin: 0; font-family: sans-serif; }
-    .ui {
-      position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 6px; z-index: 2;
-    }
+    .ui { position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 6px; z-index: 2; }
     .hint { font-size: 13px; color: #222; }
     button { margin-top: 6px; }
   </style>
@@ -17,234 +15,117 @@
 <body>
   <div class="ui">
     <div class="hint"><strong>Simulateur de crochetage (A-Frame)</strong></div>
-    <div class="hint">Instructions : cliquez-glissez le crochet pour pousser un goujon, utilisez la clef de tension (T) pour appliquer rotation. Alignez tous les goujons -> cadenas s'ouvre.</div>
-    <div style="margin-top:8px">
-      <button id="resetBtn">Réinitialiser</button>
-    </div>
+    <div class="hint">Instructions : utilisez la souris ou le doigt pour manipuler le crochet et la tension.</div>
+    <button id="resetBtn">Réinitialiser</button>
   </div>
 
-  <a-scene background="color: #bde0fe">
-    <!-- caméra et contrôles -->
+  <a-scene background="color: #cfe6ff">
     <a-entity id="cameraRig" position="0 1.6 3">
-      <a-entity camera look-controls wasd-controls>
-        <a-entity cursor="fuse: false; rayOrigin: mouse" raycaster="objects: .interactable" position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02" material="color: black; shader: flat"></a-entity>
-      </a-entity>
+      <a-entity camera look-controls wasd-controls></a-entity>
     </a-entity>
 
-    <!-- sol et lumière -->
-    <a-plane rotation="-90 0 0" width="10" height="10" color="#eef6ff"></a-plane>
-    <a-entity light="type: ambient; intensity: 0.9"></a-entity>
-    <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+    <a-plane rotation="-90 0 0" width="10" height="10" color="#eaf2ff"></a-plane>
+    <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+    <a-entity light="type: directional; intensity: 0.7" position="1 2 1"></a-entity>
 
-    <!-- Support du cadenas -->
-    <a-entity position="0 1 -1">
-      <!-- corps du cadenas -->
-      <a-box id="body" depth="0.6" height="0.6" width="1" color="#444" position="0 0 0"></a-box>
-      <!-- oeillet (shackle) -->
-      <a-entity id="shackle" position="0 0.45 0.15">
-        <!-- utiliser torus approximé par tube d'anneau -->
-        <a-curve id="shackleCurve">
-          <a-curve-point position="-0.35 0 0"></a-curve-point>
-          <a-curve-point position="-0.35 0.25 0.15"></a-curve-point>
-          <a-curve-point position="0.35 0.25 0.15"></a-curve-point>
-          <a-curve-point position="0.35 0 0"></a-curve-point>
-        </a-curve>
-        <!-- fallback: simple half-tubes -->
-        <a-cylinder position="-0.32 0.12 0.15" radius="0.04" height="0.25" rotation="0 0 90" color="#bbb"></a-cylinder>
-        <a-cylinder position="0.32 0.12 0.15" radius="0.04" height="0.25" rotation="0 0 90" color="#bbb"></a-cylinder>
-        <a-box position="0 0.25 0.15" depth="0.08" height="0.06" width="0.66" color="#bbb"></a-box>
-      </a-entity>
+    <!-- CADENAS 3D AMÉLIORÉ -->
+    <a-entity id="lock" position="0 1 -1" scale="1 1 1">
 
-      <!-- cylindre intérieur (plug) et goupilles -->
-      <a-cylinder id="plug" radius="0.18" height="0.56" rotation="0 0 0" color="#222" position="0 0 0.26"></a-cylinder>
+      <!-- Corps du cadenas (métal réaliste) -->
+      <a-box id="body" depth="0.6" height="0.9" width="1.1" color="#555" material="metalness:0.6; roughness:0.3" position="0 0 0">
+      </a-box>
 
-      <!-- emplacement des 5 goupilles -->
-      <a-entity id="pins" position="-0.4 0.05 0.53">
-        <!-- Générera des child pins via script -->
-      </a-entity>
+      <!-- Arceau (shackle) réaliste avec torus -->
+      <a-torus id="shackle" radius="0.45" radius-tubular="0.05" arc="180" rotation="0 0 0" position="0 0.45 0" material="color:#cfcfcf; metalness:0.8; roughness:0.2"></a-torus>
 
-      <!-- crochet (pick) interactif -->
-      <a-entity id="pick" class="interactable" position="-0.9 0.05 0.53" rotation="0 0 0" geometry="primitive: box; depth: 0.02; height: 0.02; width: 0.5" material="color: #d95d39">
-        <a-entity position="0.24 0 0" geometry="primitive: box; depth:0.02; height:0.02; width:0.08" material="color: #b23b2b"></a-entity>
-      </a-entity>
+      <!-- Cylindre intérieur (plug) -->
+      <a-cylinder id="plug" radius="0.18" height="0.55" color="#222" material="metalness:0.5; roughness:0.5" position="0 -0.05 0.31" rotation="90 0 0"></a-cylinder>
 
-      <!-- clef de tension (wrench) -->
-      <a-entity id="wrench" class="interactable" position="0.9 0.05 0.53" rotation="0 0 0" geometry="primitive: box; depth:0.02; height:0.03; width:0.2" material="color: #333">
-        <a-entity position="0 0 0.02" text="value: Tension (T); align: center; width: 2"></a-entity>
-      </a-entity>
+      <!-- Pins visibles dans la fenêtre -->
+      <a-box width="0.7" height="0.2" depth="0.05" position="0 0.15 0.34" color="#111"></a-box>
+      <a-entity id="pins" position="-0.28 0.15 0.365"></a-entity>
 
-      <!-- label d'état -->
-      <a-entity id="statusText" position="0 -0.4 0.53" text="value: Prêt; align: center; width: 3; color: #111"></a-entity>
+      <!-- Crochet (pick) -->
+      <a-entity id="pick" class="interactable" position="-1 0.15 0.36" geometry="primitive: box; depth: 0.02; height:0.02; width:0.6" material="color:#e05c3b; metalness:0.2; roughness:0.6"></a-entity>
+
+      <!-- Clef de tension (wrench) -->
+      <a-entity id="wrench" class="interactable" position="1 0.1 0.36" geometry="primitive: box; depth: 0.02; height:0.03; width:0.25" material="color:#333; metalness:0.3"></a-entity>
+
+      <a-entity id="statusText" position="0 -0.6 0" text="value: Prêt; align: center; width: 3; color:#000"></a-entity>
     </a-entity>
 
-    <!-- simple sky -->
-    <a-sky color="#dff0ff"></a-sky>
+    <a-sky color="#dff4ff"></a-sky>
   </a-scene>
 
   <script>
-    // Paramètres du mécanisme
     const PIN_COUNT = 5;
-    const PIN_SPACING = 0.2; // espacement x
-    const PIN_MAX = 0.12; // hauteur max (position pushing)
-
-    // état
+    const PIN_SPACING = 0.14;
+    const PIN_MAX = 0.12;
     let pins = [];
-    let tension = 0; // 0..1
+    let tension = 0;
     let unlocked = false;
 
-    // helper: créer goupilles
     const pinsContainer = document.querySelector('#pins');
-    for (let i = 0; i < PIN_COUNT; i++) {
-      const x = i * PIN_SPACING;
-      const pin = document.createElement('a-entity');
-      pin.setAttribute('class','interactable pin');
-      pin.setAttribute('geometry','primitive: cylinder; radius: 0.03; height: 0.08');
-      pin.setAttribute('material','color: #f2d7c9');
-      pin.setAttribute('position', `${x} 0 ${0}`);
-      // stockage d'état local
-      pin.pinState = { index: i, depth: 0 }; // 0..1
-      pinsContainer.appendChild(pin);
+    for (let i = 0; i < PIN_COUNT; i++){
+      const pin = document.createElement('a-cylinder');
+      pin.setAttribute('radius','0.025');
+      pin.setAttribute('height','0.08');
+      pin.setAttribute('color','#f2d7c9');
+      pin.setAttribute('position', `${i*PIN_SPACING} 0 0`);
+      pin.pinState = { index:i, depth:0 };
       pins.push(pin);
-
-      // capteur de clic pour sélectionner la pin
-      pin.addEventListener('mousedown', (evt)=>{
-        // pousser la pin si le pick est proche
-        // la logique principale se fait au drag du pick
-      });
+      pinsContainer.appendChild(pin);
     }
 
     const pick = document.querySelector('#pick');
     const wrench = document.querySelector('#wrench');
+    const plug = document.querySelector('#plug');
     const statusText = document.querySelector('#statusText');
+    const shackle = document.querySelector('#shackle');
 
-    // Interaction: click-glisser du pick pour pousser une goupille
-    let dragging = false;
-    let dragOffset = 0;
-    let selectedPin = null;
-
-    // conversion positions pour repérer la pin la plus proche
-    function worldPos(el){
-      const v = new THREE.Vector3();
-      el.object3D.getWorldPosition(v);
-      return v;
-    }
-
-    function findNearestPinToPick(){
-      const pickWorld = worldPos(pick);
-      let nearest = null; let nd = Infinity;
-      pins.forEach(pin=>{
-        const pworld = worldPos(pin);
-        const dx = Math.abs(pworld.x - pickWorld.x);
-        const dz = Math.abs(pworld.z - pickWorld.z);
-        const d = Math.sqrt(dx*dx + dz*dz);
-        if (d < nd && d < 0.25){ nd = d; nearest = pin; }
-      });
-      return nearest;
-    }
-
-    // Mouse events pour desktop
-    pick.addEventListener('mousedown', (e)=>{
-      dragging = true;
-      selectedPin = findNearestPinToPick();
-      if (selectedPin) dragOffset = selectedPin.pinState.depth * PIN_MAX;
-    });
-    window.addEventListener('mouseup', ()=>{ dragging = false; selectedPin = null; });
-
-    // For mousemove: translate clientY movement to push depth
-    window.addEventListener('mousemove', (ev)=>{
-      if (!dragging || !selectedPin) return;
-      // approximate movement: move along x axis depending on mouse horizontal movement
-      // Use clientY to simulate pushing inwards (bigger Y -> push more)
-      const h = window.innerHeight;
-      // map mouse Y to depth
-      const depth = Math.max(0, Math.min(1, 1 - ev.clientY / h));
-      selectedPin.pinState.depth = depth;
-      updatePinVisual(selectedPin);
-      checkUnlockCondition();
-    });
-
-    // Keyboard: T to increase tension gradually; Shift+T to decrease
-    window.addEventListener('keydown', (ev)=>{
-      if (ev.key.toLowerCase() === 't'){
-        tension = Math.min(1, tension + 0.12);
-        updateWrench();
-        checkUnlockCondition();
-      }
-      if (ev.key.toLowerCase() === 'r'){
-        resetLock();
-      }
-    });
-
-    document.getElementById('resetBtn').addEventListener('click', resetLock);
-
-    function updatePinVisual(pin){
-      // map pinState.depth (0..1) to local y position
-      const d = pin.pinState.depth;
-      // pin top moves up in the plug relative position
-      const y = 0.04 + d*PIN_MAX; // baseline + pushed
-      pin.setAttribute('position', `${pin.pinState.index * PIN_SPACING} ${y} 0`);
-      // change color when at shear line
-      if (d > 0.8) pin.setAttribute('material','color: #7ef89e'); else pin.setAttribute('material','color: #f2d7c9');
+    function updatePin(pin){
+      const y = pin.pinState.depth * PIN_MAX;
+      pin.setAttribute('position', `${pin.pinState.index*PIN_SPACING} ${y} 0`);
+      pin.setAttribute('color', pin.pinState.depth > 0.8 ? '#7ef89e' : '#f2d7c9');
     }
 
     function updateWrench(){
-      // show tension state visually by rotating the plug slightly according to tension
-      const plug = document.querySelector('#plug');
-      const rot = tension * 12; // degrees
-      plug.object3D.rotation.z = THREE.Math.degToRad(rot);
-      statusText.setAttribute('text', 'value', `Tension: ${Math.round(tension*100)}%`);
+      plug.object3D.rotation.z = THREE.Math.degToRad(tension * 10);
+      statusText.setAttribute('text','value',`Tension: ${Math.round(tension*100)}%`);
     }
 
-    function checkUnlockCondition(){
+    function checkUnlock(){
       if (unlocked) return;
-      // condition simple : pour chaque pin, depth must exceed a threshold that depends on pin 'required' value
-      // for more realism, generate random required thresholds initially
-      const allAligned = pins.every(pin=> pin.pinState.depth >= pin.requiredDepth - 0.05);
-      // also must have some tension
-      if (allAligned && tension > 0.15){ unlock(); }
+      if (pins.every(p => p.pinState.depth >= p.requiredDepth - 0.05) && tension > 0.2){ unlock(); }
     }
 
     function unlock(){
       unlocked = true;
-      statusText.setAttribute('text', 'value', 'Déverrouillé !');
-      // animer l'oeillet (shackle) : lever
-      const shackle = document.querySelector('#shackle');
-      // simple tween using setInterval
-      let t=0; const id = setInterval(()=>{
-        t+=0.04; shackle.object3D.position.y = 0.45 + t*0.8;
-        if (t >= 0.8){ clearInterval(id); }
+      statusText.setAttribute('text','value','Déverrouillé !');
+      let t = 0;
+      const anim = setInterval(()=>{
+        t += 0.02;
+        shackle.object3D.position.y = 0.45 + t*0.8;
+        if(t>=1) clearInterval(anim);
       },16);
     }
 
     function resetLock(){
-      unlocked = false; tension = 0; pins.forEach(pin=>{ pin.pinState.depth = 0; updatePinVisual(pin); pin.requiredDepth = Math.random()*0.6 + 0.3; });
+      unlocked = false;
+      tension = 0;
+      pins.forEach(p=>{ p.pinState.depth = 0; p.requiredDepth = Math.random()*0.6 + 0.3; updatePin(p); });
+      shackle.object3D.position.set(0,0.45,0);
       updateWrench();
-      const shackle = document.querySelector('#shackle');
-      shackle.object3D.position.set(0,0.45,0.15);
       statusText.setAttribute('text','value','Réinitialisé');
     }
 
-    // initialisation : définir les profondeurs requises aléatoires
-    pins.forEach(pin=>{ pin.requiredDepth = Math.random()*0.6 + 0.3; updatePinVisual(pin); });
-    updateWrench();
-
-    // Petit message d'aide pour mobile: utiliser le glisser tactile pour pousser
-    // Touch handlers pour pick
-    pick.addEventListener('touchstart', (e)=>{ dragging=true; selectedPin = findNearestPinToPick(); });
-    window.addEventListener('touchend', ()=>{ dragging=false; selectedPin=null; });
-    window.addEventListener('touchmove', (ev)=>{
-      if (!dragging || !selectedPin) return;
-      const touch = ev.touches[0];
-      const h = window.innerHeight;
-      const depth = Math.max(0, Math.min(1, 1 - touch.clientY / h));
-      selectedPin.pinState.depth = depth;
-      updatePinVisual(selectedPin);
-      checkUnlockCondition();
+    document.querySelector('#resetBtn').addEventListener('click', resetLock);
+    window.addEventListener('keydown', e=>{
+      if (e.key.toLowerCase()==='t'){ tension=Math.min(1,tension+0.1); updateWrench(); checkUnlock(); }
     });
 
-    // Inform the user about keys
-    console.log('Touches utiles: T pour augmenter la tension, R pour réinitialiser.');
+    pins.forEach(p=>{ p.requiredDepth = Math.random()*0.6 + 0.3; updatePin(p); });
+    updateWrench();
   </script>
 </body>
 </html>
