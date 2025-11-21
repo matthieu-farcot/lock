@@ -21,7 +21,13 @@
 
   <a-scene background="color: #cfe6ff">
     <a-entity id="cameraRig" position="0 1.6 3">
-      <a-entity camera look-controls wasd-controls></a-entity>
+      <a-entity camera look-controls>
+        <a-entity cursor="rayOrigin: mouse" raycaster="objects: .interactable"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                  material="color: black; shader: flat"></a-entity>
+      </a-entity>
+    </a-entity>
     </a-entity>
 
     <a-plane rotation="-90 0 0" width="10" height="10" color="#eaf2ff"></a-plane>
@@ -61,6 +67,7 @@
     const PIN_COUNT = 5;
     const PIN_SPACING = 0.14;
     const PIN_MAX = 0.12;
+
     let pins = [];
     let tension = 0;
     let unlocked = false;
@@ -72,6 +79,7 @@
       pin.setAttribute('height','0.08');
       pin.setAttribute('color','#f2d7c9');
       pin.setAttribute('position', `${i*PIN_SPACING} 0 0`);
+      pin.classList.add('interactable');
       pin.pinState = { index:i, depth:0 };
       pins.push(pin);
       pinsContainer.appendChild(pin);
@@ -82,6 +90,53 @@
     const plug = document.querySelector('#plug');
     const statusText = document.querySelector('#statusText');
     const shackle = document.querySelector('#shackle');
+
+    // ---- DRAG LOGIQUE SIMPLE POUR PICK ----
+    let draggingPick = false;
+
+    pick.addEventListener('mousedown', ()=>{
+      draggingPick = true;
+    });
+    window.addEventListener('mouseup', ()=> draggingPick = false);
+
+    window.addEventListener('mousemove', ev=>{
+      if (!draggingPick) return;
+
+      // déplacer le crochet horizontalement
+      const xNorm = (ev.clientX / window.innerWidth) * 2 - 1;
+      const xPos = xNorm * 0.8; // amplitude
+      pick.object3D.position.x = xPos;
+
+      // détecter pin proche
+      const closest = pins.reduce((best,p)=>{
+        const px = p.object3D.position.x + pinsContainer.object3D.position.x - 0.28;
+        const dist = Math.abs(px - xPos);
+        return dist < best.dist ? {pin:p, dist} : best;
+      },{pin:null,dist:999}).pin;
+
+      if (closest){
+        // profondeur basée sur Y de la souris
+        const depth = Math.max(0, Math.min(1, 1 - ev.clientY / window.innerHeight));
+        closest.pinState.depth = depth;
+        updatePin(closest);
+        checkUnlock();
+      }
+    });
+
+    // ---- TENSION ----
+    wrench.addEventListener('mousedown', ()=>{
+      tension = Math.min(1, tension + 0.15);
+      updateWrench();
+      checkUnlock();
+    });
+
+    window.addEventListener('keydown', e=>{
+      if (e.key.toLowerCase()==='t'){
+        tension=Math.min(1,tension+0.1);
+        updateWrench();
+        checkUnlock();
+      }
+    });
 
     function updatePin(pin){
       const y = pin.pinState.depth * PIN_MAX;
@@ -120,10 +175,8 @@
     }
 
     document.querySelector('#resetBtn').addEventListener('click', resetLock);
-    window.addEventListener('keydown', e=>{
-      if (e.key.toLowerCase()==='t'){ tension=Math.min(1,tension+0.1); updateWrench(); checkUnlock(); }
-    });
 
+    // Initialisation
     pins.forEach(p=>{ p.requiredDepth = Math.random()*0.6 + 0.3; updatePin(p); });
     updateWrench();
   </script>
